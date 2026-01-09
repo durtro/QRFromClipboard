@@ -1,8 +1,9 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
                              QWidget, QLabel, QPushButton, QTextEdit)
-from PyQt6.QtGui import QPixmap, QClipboard
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import QTimer, Qt
+from io import BytesIO
 import qrcode
 
 class QRMonitor(QMainWindow):
@@ -28,17 +29,17 @@ class QRMonitor(QMainWindow):
         self.text_display.setMaximumHeight(100)
         layout.addWidget(self.text_display)
         
+        # Buttons
+        btn = QPushButton("📱 QR aus Zwischenablage generieren")
+        btn.clicked.connect(self.generate_qr)
+        layout.addWidget(btn)
+
         # QR-Bild-Label
         self.qr_label = QLabel("Kein QR-Code vorhanden")
         self.qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.qr_label.setStyleSheet("border: 2px dashed gray; min-height: 300px;")
         self.qr_label.setMinimumSize(400, 400)
         layout.addWidget(self.qr_label)
-        
-        # Buttons
-        btn = QPushButton("📱 QR aus Zwischenablage generieren")
-        btn.clicked.connect(self.generate_qr)
-        layout.addWidget(btn)
     
     def start_clipboard_monitor(self):
         self.timer = QTimer()
@@ -46,13 +47,17 @@ class QRMonitor(QMainWindow):
         self.timer.start(500)  # Alle 500ms
     
     def check_clipboard(self):
-        current = self.clipboard.text()
-        if current != self.last_text:
-            self.last_text = current
-            self.text_display.setText(f"Letzter Inhalt: '{current}'")
+        if not len(self.clipboard.text()) > 2000:
+            current = self.clipboard.text()
+            if current != self.last_text:
+                self.last_text = current
+                self.text_display.setText(f"{current}")
+        else:
+            self.text_display.setText(f"Text too long")
     
     def generate_qr(self):
-        text = self.clipboard.text()
+        #text = self.clipboard.text()
+        text = self.text_display.toPlainText()
         if not text:
             self.qr_label.setText("❌ Zwischenablage leer!")
             return
@@ -61,12 +66,15 @@ class QRMonitor(QMainWindow):
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
         qr.add_data(text)
         qr.make(fit=True)
-        pixmap = qr.make_image(fill_color="black", back_color="white")
+        img = qr.make_image(fill_color="black", back_color="white")
+        img_bytes = BytesIO()
+        img.save(img_bytes, format='PNG')
+        img_bytes = img_bytes.getvalue()
         
         # Als QPixmap konvertieren
-        pixmap.save("temp_qr.png")
-        qt_pixmap = QPixmap("temp_qr.png")
-        
+        qt_pixmap = QPixmap()
+        qt_pixmap.loadFromData(img_bytes, "PNG")
+
         # Skalieren und anzeigen
         scaled = qt_pixmap.scaled(
             400, 400, 
@@ -74,7 +82,7 @@ class QRMonitor(QMainWindow):
             Qt.TransformationMode.SmoothTransformation
         )
         self.qr_label.setPixmap(scaled)
-        self.setWindowTitle(f"QR Monitor - {len(text)} Zeichen")
+        self.setWindowTitle(f"QR Code from Clipboard - {len(text)} characters")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -3,7 +3,7 @@ name = "qrfromclipboard"
 version = "0.1.0"
 description = "A PyQt6 desktop application"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "qrcode[pil]",
     "PyQt6>=6.6.0",

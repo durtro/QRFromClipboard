@@ -1,3 +1,3 @@
-# qrfromclipboard
+# QR from Clipboard
 
-A Python project created with UV.
+A python script with QT6 GUI to generate QR codes from the content of the clipboard.
